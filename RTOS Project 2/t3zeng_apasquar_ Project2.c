@@ -1,5 +1,5 @@
 //REMINDER TO DOUBLE CHECK THE GETTERS AND SETTERS TO ENSURE THAT THEY PUT EVERYTHING IN THE 4 BYTE HEADER PROPERLY.
-//Hours spent: 16
+//Hours spent: 17
 #include "half_fit.h"
 #include <stdint.h>
 #include <stdio.h>
