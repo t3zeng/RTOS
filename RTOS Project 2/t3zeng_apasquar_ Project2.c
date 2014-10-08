@@ -1,4 +1,4 @@
-//Hi Anthony :)
+//REMINDER TO DOUBLE CHECK THE GETTERS AND SETTERS TO ENSURE THAT THEY PUT EVERYTHING IN THE 4 BYTE HEADER PROPERLY.
 #include "half_fit.h"
 #include <stdint.h>
 #include <stdio.h>
@@ -148,9 +148,28 @@ void *half_alloc( int n )
 	//series of if statements to determine which bucket to take memory from (4 bytes are taken out for use with the header)
 	if (n + 4 > 0 && n + 4 <= 32 && bucket[0] != NULL)
 	{
-		int index = bucket[0]-&my_mem;
-		set_prev(index+n+4, get_prev(index));
-		set_next(index+n+5, get_next(index+1));
+		//This block of code creates a copy of the header of free mem and shifts it to the end of the newly alloced mem
+		//the size is changed to reflect the new smaller size of the free mem
+		//Difference of bucket and &my_mem[0] allows us to get the index in the array to store the new headers
+		int index = bucket[0]-&my_mem[0];
+
+		if(n-get_block_size(index+6) > 4)
+		{
+			//sets each part of the header 1 index from each other starting at index+n+4 which is the end of the now allocated n bytes of memory
+			set_prev(index+n+4, get_prev(index));
+			set_next(index+n+5, get_next(index+1));
+			set_block_size(index+n+6, get_block_size(index+2)-(n/32));
+			set_flag(index+n+7, get_flag(index+3));
+			set_prev_bucket(index+n+8, get_prev_bucket(index+4));
+			set_next_bucket(index+n+9, get_next_bucket(index+5));
+			//change bucket[0]'s address to newly located header
+			bucket[0] += n+4;
+		}
+
+		//changes the size of the new blocks accordingly and set the flags
+		set_block_size(index+6, n/32);
+		set_flag(index+7, 1);
+
 
 	}
 
