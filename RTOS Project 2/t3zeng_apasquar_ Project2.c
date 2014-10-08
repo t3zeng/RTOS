@@ -1,3 +1,4 @@
+//Hi Anthony :)
 #include "half_fit.h"
 #include <stdint.h>
 #include <stdio.h>
@@ -22,13 +23,9 @@ int bucket[10] = {NULL};
 // &my_mem;
 int main(void)
 {
-	int i;
-	half_init();
-	printf("%d\n", my_mem[0]);
-	U16 test = "asdffdsa";
-	my_mem[0] = test;
-	for(i=0;i<10;i++)
-		printf("%d\n", my_mem[i]);
+	printf("mem[0] %d\n", &my_mem[0]);
+	printf("mem[5] %d\n", &my_mem[5]);
+	printf("index shift %d\n", &my_mem[5]-&my_mem[0]);
 	printf("Run Successful!");
 
 	return 0;
@@ -141,8 +138,8 @@ void half_init()
 	//Puts the Next block in bucket as 10 bits after
 	set_next_bucket(5, &my_mem[5]);
 
-	//makes the last bucket (16384 - 32767) store the address of the next_bucket block
-	bucket[10] = &my_mem[5];
+	//makes the last bucket (16384 - 32767) store the address of the first index in the header
+	bucket[10] = &my_mem[0];
 }
 
 //
@@ -151,28 +148,61 @@ void *half_alloc( int n )
 	//series of if statements to determine which bucket to take memory from (4 bytes are taken out for use with the header)
 	if (n + 4 > 0 && n + 4 <= 32 && bucket[0] != NULL)
 	{
-		set_prev(int index, U16 prev);
+		int index = bucket[0]-&my_mem;
+		set_prev(index+n+4, get_prev(index));
+		set_next(index+n+5, get_next(index+1));
+
 	}
 
 	else if(n + 4 <= 64 && bucket[1] != NULL)
+	{
+
+	}
 
 	else if(n + 4 <= 128 && bucket[2] != NULL)
+	{
+
+	}
 
 	else if(n + 4 <= 256 && bucket[3] != NULL)
+	{
+
+	}
 
 	else if(n + 4 <= 512 && bucket[4] != NULL)
+	{
+
+	}
 
 	else if(n + 4 <= 1024 && bucket[5] != NULL)
+	{
+
+	}
 
 	else if(n + 4 <= 2048 && bucket[6] != NULL)
+	{
+
+	}
 
 	else if(n + 4 <= 4096 && bucket[7] != NULL)
+	{
+
+	}
 
 	else if(n + 4 <= 8192 && bucket[8] != NULL)
+	{
+
+	}
 
 	else if(n + 4 <= 16384 && bucket[9] != NULL)
+	{
+
+	}
 
 	else if(n + 4 <= 32768 && bucket[10] != NULL)
+	{
+
+	}
 
 	else
 		printf("C'EST IMPOSSIBLE!! SACRE BLEU?!?!?");
