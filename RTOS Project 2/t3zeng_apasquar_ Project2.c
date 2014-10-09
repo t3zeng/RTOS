@@ -1,5 +1,5 @@
 //REMINDER TO DOUBLE CHECK THE GETTERS AND SETTERS TO ENSURE THAT THEY PUT EVERYTHING IN THE 4 BYTE HEADER PROPERLY.
-//Hours spent: 17
+//Hours spent: 18
 #include "half_fit.h"
 #include <stdint.h>
 #include <stdio.h>
@@ -21,13 +21,14 @@ U8 my_mem [32768];
 int bucket[10] = {NULL};
 
 //my base address of the block
-// &my_mem;
 int main(void)
 {
-	printf("mem[0] %d\n", &my_mem[0]);
-	printf("mem[5] %d\n", &my_mem[5]);
-	printf("index shift %d\n", &my_mem[5]-&my_mem[0]);
-	printf("Run Successful!");
+	half_init();
+	printf("%d\n", get_prev(0));
+	printf("%d\n", get_next(1));
+	printf("%d\n", get_block_size(2));
+	printf("%d\n", my_mem[2]);
+	get_block_size(2);
 
 	return 0;
 }
@@ -35,41 +36,41 @@ int main(void)
 U16 get_prev(int index)
 {
 	U16 prev = my_mem[index];
-	prev << 2;
+	prev = prev << 2;
 	prev+=(my_mem[index+1] & 0xC0)>>6;
 	return prev;
 }
 U16 get_next(int index)
 {
 	U16 next = my_mem[index] & 0x3F;
-	next << 4;
+	next = next << 4;
 	next+=(my_mem[index+1] & 0xF0)>>4;
 	return next;
 }
 U16 get_block_size(int index)
 {
 	U16 block_size = my_mem[index] & 0xF;
-	block_size << 6;
+	block_size = block_size << 6;
 	block_size+=(my_mem[index+1] & 0xFC)>>2;
 	return block_size;
 }
 U16 get_flag(int index)
 {
 	U16 flag = my_mem[index] & 0x2;
-	flag >> 1;
+	flag = flag >> 1;
 	return flag;
 }
 U16 get_prev_bucket(int index)
 {
 	U16 prev_bucket = my_mem[index];
-	prev_bucket << 2;
+	prev_bucket = prev_bucket << 2;
 	prev_bucket +=(my_mem[index+1] & 0xC0) >> 6;
 	return prev_bucket;
 }
 U16 get_next_bucket(int index)
 {
 	U16 next_bucket = my_mem[index] & 0x3F;
-	next_bucket << 4;
+	next_bucket = next_bucket << 4;
 	next_bucket+=(my_mem[index+1] & 0xC0) >> 4;
 	return next_bucket;
 }
@@ -78,23 +79,23 @@ U16 get_next_bucket(int index)
 //Takes the index and a U16 value
 void set_prev(int index, U16 prev)
 {
-	U16 temp = prev & 3;
-	my_mem[index+1] = temp << 6;
-	prev >> 2;
+	U16 temp = prev & 0x3;
+	my_mem[index+1] += temp << 6;
+	prev = prev >> 2;
 	my_mem[index] += prev;
 }
 void set_next(int index, U16 next)
 {
 	U16 temp = next & 0xF;
-	my_mem[index+1] = temp << 4;
-	next >> 4;
+	my_mem[index+1] += temp << 4;
+	next = next >> 4;
 	my_mem[index] += next;
 }
 void set_block_size(int index, U16 size)
 {
 	U16 temp = size & 0x3F;
-	my_mem[index+1] = temp << 2;
-	size >> 6;
+	my_mem[index+1] += temp << 2;
+	size = size >> 6;
 	my_mem[index] += size;
 }
 void set_flag(int index, U16 flag)
@@ -105,15 +106,15 @@ void set_flag(int index, U16 flag)
 void set_prev_bucket(int index, U16 prev_bucket)
 {
 	U16 temp = prev_bucket & 3;
-	my_mem[index+1] = temp << 6;
-	prev_bucket >> 2;
+	my_mem[index+1] += temp << 6;
+	prev_bucket = prev_bucket >> 2;
 	my_mem[index] += prev_bucket;
 }
 void set_next_bucket(int index, U16 next_bucket)
 {
 	U16 temp = next_bucket & 0xF;
-	my_mem[index+1] = temp << 4;
-	next_bucket >> 4;
+	my_mem[index+1] += temp << 4;
+	next_bucket = next_bucket >> 4;
 	my_mem[index] += next_bucket;
 }
 
