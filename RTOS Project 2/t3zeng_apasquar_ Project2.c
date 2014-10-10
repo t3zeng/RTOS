@@ -1,5 +1,5 @@
 //REMINDER TO DOUBLE CHECK THE GETTERS AND SETTERS TO ENSURE THAT THEY PUT EVERYTHING IN THE 4 BYTE HEADER PROPERLY.
-//Hours spent: 18
+//Hours spent: 20
 #include "half_fit.h"
 #include <stdint.h>
 #include <stdio.h>
@@ -161,225 +161,58 @@ void *half_alloc( int n )
 		}
 		printf("%d\n",counter);
 
+		//No space is available for allocation of a block of that size
+		if(counter == 11)
+			return -1;
 
-
-		if (n + 4 > 0 && n + 4 <= 32 && bucket[0] != NULL)
-			{
-				//This block of code creates a copy of the header of free mem and shifts it to the end of the newly alloced mem
-				//the size is changed to reflect the new smaller size of the free mem
-				//Difference of bucket and &my_mem[0] allows us to get the index in the array to store the new headers
-				int index = bucket[0]-(int)&my_mem[0];
-
-				//Checks if the remaining memory after allocation is enough to form a new block of free memory with a header and creates them
-				if(get_block_size(index+6)-n > 32 + 4)
-				{
-					//sets each part of the header 1 index from each other starting at index+n+4 which is the end of the now allocated n bytes of memory
-					set_prev(index+n+4, index+&my_mem[0]);
-					set_next(index+n+5, get_next(index+1));
-					set_block_size(index+n+6, get_block_size(index+2)-(n/32));
-					set_flag(index+n+7, get_flag(index+3));
-					set_prev_bucket(index+n+8, NULL); // change NULL to the address of the last block of memory in the bucket
-					set_next_bucket(index+n+9, get_next_bucket(index+5));
-					//change bucket[0]'s address to newly located header
-					bucket[0] += n+4;
-				}
-				//in the event that there isn't enough remaining free memory to create a new block, the bucket will now point to the next free memory block in the bucket
-				else if(get_next_bucket(index+5) != NULL)
-				{
-					bucket[0] = get_next_bucket(index+5);
-				}
-				//if there are no more free blocks of memory left, the bucket will be empty and return NULL when called
-				else
-				{
-					bucket[0] = NULL;
-				}
-				//changes the size of the new blocks accordingly, set the flags and relocate pointers
-				set_block_size(index+2, n/32);
-				set_flag(index+3, 1);
-				set_next(index+1, &my_mem[0]+index+n+4);
-			}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-		//series of if statements to determine which bucket to take memory from (4 bytes are taken out for use with the header)
-		if (n + 4 > 0 && n + 4 <= 32 && bucket[0] != NULL)
+		if (n + 4 > 0 && n + 4 <= 16*(2<<counter))
 		{
 			//This block of code creates a copy of the header of free mem and shifts it to the end of the newly alloced mem
 			//the size is changed to reflect the new smaller size of the free mem
 			//Difference of bucket and &my_mem[0] allows us to get the index in the array to store the new headers
-			int index = bucket[0]-(int)&my_mem[0];
+			int index = bucket[counter]-(int)&my_mem[0];
+
+			//sets each part of the header 1 index from each other starting at index+n+4 which is the end of the now allocated n bytes of memory
+			set_prev(index+n+4, index+&my_mem[0]);
+			set_next(index+n+5, get_next(index+1));
+			set_block_size(index+n+6, get_block_size(index+2)-(n/32));
+			set_flag(index+n+7, get_flag(index+3));
+			set_prev_bucket(index+n+8, NULL); // change NULL to the address of the last block of memory in the bucket
+			set_next_bucket(index+n+9, get_next_bucket(index+5));
 
 			//Checks if the remaining memory after allocation is enough to form a new block of free memory with a header and creates them
-			if(get_block_size(index+6)-n > 32 + 4)
+			if(get_block_size(index+6)-n > 16*(2<<counter) + 4)
 			{
-				//sets each part of the header 1 index from each other starting at index+n+4 which is the end of the now allocated n bytes of memory
-				set_prev(index+n+4, index+&my_mem[0]);
-				set_next(index+n+5, get_next(index+1));
-				set_block_size(index+n+6, get_block_size(index+2)-(n/32));
-				set_flag(index+n+7, get_flag(index+3));
-				set_prev_bucket(index+n+8, NULL); // change NULL to the address of the last block of memory in the bucket
-				set_next_bucket(index+n+9, get_next_bucket(index+5));
-				//change bucket[0]'s address to newly located header
-				bucket[0] += n+4;
+				//change bucket[counter]'s address to newly located header
+				bucket[counter] += n+4;
+			}
+			//handles the case where the new the memory must be placed in a smaller bucket
+			else if(get_block_size(index+n+6) - n < 16*(2<<counter) + 4)
+			{
+				int temp = bucket[counter];
+				//since the new block size has been confirmed to be smaller, counter is adjusted to reflect the change
+				while(get_block_size(index+n+6) < (16*(2<<counter)) && counter >= 0)
+				{
+					counter--;
+				}
+				//sets the address of the new bucket to where the new block of memory is
+				bucket[counter] = temp;
 			}
 			//in the event that there isn't enough remaining free memory to create a new block, the bucket will now point to the next free memory block in the bucket
 			else if(get_next_bucket(index+5) != NULL)
 			{
-				bucket[0] = get_next_bucket(index+5);
+				bucket[counter] = get_next_bucket(index+5);
 			}
 			//if there are no more free blocks of memory left, the bucket will be empty and return NULL when called
 			else
 			{
-				bucket[0] = NULL;
+				bucket[counter] = NULL;
 			}
 			//changes the size of the new blocks accordingly, set the flags and relocate pointers
 			set_block_size(index+2, n/32);
 			set_flag(index+3, 1);
 			set_next(index+1, &my_mem[0]+index+n+4);
 		}
-
-		else if(n + 4 <= 64 && bucket[1] != NULL)
-		{
-			//This block of code creates a copy of the header of free mem and shifts it to the end of the newly alloced mem
-			//the size is changed to reflect the new smaller size of the free mem
-			//Difference of bucket and &my_mem[0] allows us to get the index in the array to store the new headers
-			int index = bucket[1]-(int)&my_mem[0];
-
-			//Checks if the remaining memory after allocation is enough to form a new block of free memory with a header and creates them
-			if(get_block_size(index+6)-n > 64 + 4)
-			{
-				//sets each part of the header 1 index from each other starting at index+n+4 which is the end of the now allocated n bytes of memory
-				set_prev(index+n+4, index+&my_mem[0]);
-				set_next(index+n+5, get_next(index+1));
-				set_block_size(index+n+6, get_block_size(index+2)-(n/32));
-				set_flag(index+n+7, get_flag(index+3));
-				set_prev_bucket(index+n+8, NULL); // change NULL to the address of the last block of memory in the bucket
-				set_next_bucket(index+n+9, get_next_bucket(index+5));
-				//change bucket[1]'s address to newly located header
-				bucket[1] += n+4;
-			}
-			else if(get_block_size(index+6)-n > 32 + 4)
-			{
-				//sets each part of the header 1 index from each other starting at index+n+4 which is the end of the now allocated n bytes of memory
-				set_prev(index+n+4, index+&my_mem[0]);
-				set_next(index+n+5, get_next(index+1));
-				set_block_size(index+n+6, get_block_size(index+2)-(n/32));
-				set_flag(index+n+7, get_flag(index+3));
-				set_prev_bucket(index+n+8, NULL); // change NULL to the address of the last block of memory in the bucket
-				set_next_bucket(index+n+9, get_next_bucket(index+5));
-
-				//handles bucket 1
-				//in the event that there isn't enough remaining free memory to create a new block, the bucket will now point to the next free memory block in the bucket
-				if(get_next_bucket(index+5) != NULL)
-				{
-					bucket[1] = get_next_bucket(index+5);
-				}
-				//if there are no more free blocks of memory left, the bucket will be empty and return NULL when called
-				else
-				{
-					bucket[1] = NULL;
-				}
-
-				//adds new free block to bucket 0
-				if(bucket[0] == NULL)
-					bucket[0] = index+n+4 + &my_mem[0];
-				else if(bucket[0]-(int)(&my_mem[0]) > index + n + 4)
-				{
-					set_next_bucket(index+n+9, bucket[0]-(int)&my_mem[0]);
-					bucket[0] = index + n + 4 + &my_mem[0];
-				}
-				else if(bucket[0] - (int)&my_mem[0] < index + n + 4)
-				{
-					//creates a comparator int that goes to the bucket greater than index+n+4
-					int comparator = bucket[0]-(int)(&my_mem[0]);
-					while(comparator < index+n+4 && comparator != NULL)
-						comparator = get_next_bucket(comparator+5);
-					//adjust pointers to accomodate for new block in middle of the bucket
-					set_prev_bucket(index+n+8, get_prev_bucket(comparator+4));
-					set_prev_bucket(comparator+4, get_prev(index+n+4));
-					set_next_bucket(index+n+9, get_prev(comparator));
-					set_next_bucket(get_prev(comparator)-(int)(&my_mem[0])+5, index+n+4+(int)(&my_mem[0]));
-				}
-			}
-			//in the event that there isn't enough remaining free memory to create a new block, the bucket will now point to the next free memory block in the bucket
-			else if(get_next_bucket(index+5) != NULL)
-			{
-				bucket[1] = get_next_bucket(index+5);
-			}
-			//if there are no more free blocks of memory left, the bucket will be empty and return NULL when called
-			else
-			{
-				bucket[1] = NULL;
-			}
-			//changes the size of the new blocks accordingly, set the flags and relocate pointers
-			set_block_size(index+2, n/32);
-			set_flag(index+3, 1);
-			set_next(index+1, &my_mem[0]+index+n+4);
-		}
-
-		else if(n + 4 <= 128 && bucket[2] != NULL)
-		{
-
-		}
-
-		else if(n + 4 <= 256 && bucket[3] != NULL)
-		{
-
-		}
-
-		else if(n + 4 <= 512 && bucket[4] != NULL)
-		{
-
-		}
-
-		else if(n + 4 <= 1024 && bucket[5] != NULL)
-		{
-
-		}
-
-		else if(n + 4 <= 2048 && bucket[6] != NULL)
-		{
-
-		}
-
-		else if(n + 4 <= 4096 && bucket[7] != NULL)
-		{
-
-		}
-
-		else if(n + 4 <= 8192 && bucket[8] != NULL)
-		{
-
-		}
-
-		else if(n + 4 <= 16384 && bucket[9] != NULL)
-		{
-
-		}
-
-		else if(n + 4 <= 32768 && bucket[10] != NULL)
-		{
-
-		}
-
-		else
-			printf("C'EST IMPOSSIBLE!! SACRE BLEU?!?!?");
 	}
 }
 /*

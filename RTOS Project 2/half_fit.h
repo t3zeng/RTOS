@@ -32,6 +32,15 @@ void *half_alloc( int );
 U16 get_prev(int index);
 U16 get_next(int index);
 U16 get_block_size(int index);
+U16 get_flag(int index);
+U16 get_prev_bucket(int index);
+U16 get_next_bucket(int index);
+void set_prev(int index, U16 prev);
+void set_next(int index, U16 next);
+void set_block_size(int index, U16 size);
+void set_flag(int index, U16 flag);
+void set_prev_bucket(int index, U16 prev_bucket);
+void set_next_bucket(int index, U16 next_bucket);
 //void  half_free( void * );
 
 #endif
