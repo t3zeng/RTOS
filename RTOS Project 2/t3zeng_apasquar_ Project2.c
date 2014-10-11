@@ -1,5 +1,5 @@
 //REMINDER TO DOUBLE CHECK THE GETTERS AND SETTERS TO ENSURE THAT THEY PUT EVERYTHING IN THE 4 BYTE HEADER PROPERLY.
-//Hours spent: 25
+//Hours spent: 30
 #include "half_fit.h"
 #include <stdint.h>
 #include <stdio.h>
@@ -163,7 +163,7 @@ void *half_alloc( int n )
 
 		//No space is available for allocation of a block of that size
 		if(counter == 11)
-			return;
+			return -1;
 
 		if (n + 4 > 0 && n + 4 <= 16*(2<<counter))
 		{
@@ -225,29 +225,76 @@ void half_free( void * mem)
 	//checks the block ahead to see if it is empty and can be combined
 	if(get_flag(index+3+(get_block_size(index+2)))==0)
 	{
+		//divides n by 32 to quickly determine the bucket in which the new block belongs in
+		int original_bucket = 0;
+		while((get_block_size(index+2) > (16*(2<<original_bucket)) && original_bucket <= 10) || (bucket[original_bucket] == NULL && original_bucket <= 10))
+			original_bucket++;
+
 		//eliminate headers of adjacent block and adjust the size and pointers
 		set_block_size(index+2, get_block_size(index+2)+get_block_size(get_next(index+1)+2));
 		set_next(index+1, get_next(get_next(index+1)));
 		set_prev(get_next(get_next(index+1)), get_prev(index));
+
 		//manipulate buckets if necessary (this includes changing bucket pointers)
-
-		//divides n by 32 to quickly determine the bucket in which the new block belongs in
-		int counter = 0;
-		while((get_block_size(index+2) > (16*(2<<counter)) && counter <= 10) || (bucket[counter] == NULL && counter <= 10))
-		{
-			counter++;
-		}
+		//divides n by 32 once more to see if the memory should still go in the same bucket
+		int new_bucket = 0;
+		while((get_block_size(index+2) > (16*(2<<new_bucket)) && new_bucket <= 10) || (bucket[new_bucket] == NULL && new_bucket <= 10))
+			new_bucket++;
 		//new size belongs in the same bucket
-		if(bucket[counter])
+		if(new_bucket == original_bucket)
 		{
-
+			//eliminate the old block from the bucket
 		}
 		//new size belongs in a different bucket
-		else if(0)
+		else
 		{
-			//connect the mem on the left and right together
-			set_next_bucket(get_prev_bucket(index+4+(get_block_size(index+2)))+5, get_next_bucket(index+5+(get_block_size(index+2))));
-			set_prev_bucket(get_next_bucket(index+5+(get_block_size(index+2)))+4, get_prev_bucket(index+4+(get_block_size(index+2))));
+			//check if the memory is the first in its bucket
+			if(get_prev_bucket(index+4+(get_block_size(index+2))) == index+(get_block_size(index+2)))
+			{
+				//make the next thing in that bucket point to itself on prev
+				set_prev_bucket(get_next_bucket(index+5+(get_block_size(index+2)))+4, index+5+(get_block_size(index+2)));
+			}
+			//check if the memory is the last in its bucket
+			else if(get_next_bucket(index+5+(get_block_size(index+2))) == index+(get_block_size(index+2)))
+			{
+				set_next_bucket(get_prev_bucket(index+4+(get_block_size(index+2)))+5, index+4+(get_block_size(index+2)));
+			}
+			//connect the mem on the left and right together which would eliminate the memory from the bucket unless it was the first or last
+			else
+			{
+				set_next_bucket(get_prev_bucket(index+4+(get_block_size(index+2)))+5, get_next_bucket(index+5+(get_block_size(index+2))));
+				set_prev_bucket(get_next_bucket(index+5+(get_block_size(index+2)))+4, get_prev_bucket(index+4+(get_block_size(index+2))));
+			}
+
+			//add the new bigger block of memory to its new bucket
+			int current_index = bucket(new_bucket);
+			while(index > get_next_bucket(current_index) && get_next_bucket(current_index) != get_next_bucket(current_index)-5)
+				current_index = get_next_bucket(current_index)+5;
+			//handle the case in which current_index is the first block of memory in the bucket and index comes before it
+			if(current_index == bucket(new_bucket))
+			{
+				//since the index is located before the first block in the bucket, it becomes the new first block (prev points to itself and next points to old first mem in bucket)
+				bucket(new_bucket) = index;
+				set_prev_bucket(index+4, index);
+				set_next_bucket(index+5) = current_index;
+			}
+			//handle case where current_index is the last block of memory in the bucket and index comes after
+			else if(current_index-5 < index)
+			{
+				//This happens when the loop reached the end and index is still greater
+				set_next_bucket(current_index, index);
+				set_next_bucket(index+5, index);
+				set_prev_bucket(index+4, current_index-5);
+			}
+			//handles case where current_index is somewhere in the middle
+			else
+			{
+				//current_index at this point will point to the free mem after the one at index
+				set_next_bucket(index+5, current_index-5);
+				set_prev_bucket(index+4, get_prev_bucket(current_index-1));
+				set_next_bucket(get_prev_bucket(index+4)+5, index);
+				set_prev_bucket(current_index-1, index);
+			}
 		}
 	}
 	//checks the block behind to see if it is empty and can be combined
