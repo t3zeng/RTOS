@@ -41,6 +41,6 @@ void set_block_size(int index, U16 size);
 void set_flag(int index, U16 flag);
 void set_prev_bucket(int index, U16 prev_bucket);
 void set_next_bucket(int index, U16 next_bucket);
-//void  half_free( void * );
+void  half_free( void * mem);
 
 #endif

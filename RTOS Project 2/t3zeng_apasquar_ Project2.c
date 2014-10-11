@@ -1,5 +1,5 @@
 //REMINDER TO DOUBLE CHECK THE GETTERS AND SETTERS TO ENSURE THAT THEY PUT EVERYTHING IN THE 4 BYTE HEADER PROPERLY.
-//Hours spent: 20
+//Hours spent: 25
 #include "half_fit.h"
 #include <stdint.h>
 #include <stdio.h>
@@ -124,10 +124,10 @@ void half_init()
 {
 	//Initializes the first header block by using bit shifting
 	//Puts the prev block as 10 bits at the very front
-	set_prev(0, &my_mem[0]);
+	set_prev(0, 0);
 
 	//Puts the next block as 10 bits right beside the prev block
-	set_next(1, &my_mem[1]);
+	set_next(1, 1);
 
 	//Puts the block_size block as 10 bits right beside the next block
 	set_block_size(2, 1024);
@@ -136,13 +136,13 @@ void half_init()
 	set_flag(3, 0);
 
 	//Puts the Previous block in bucket as 10 bits after
-	set_prev_bucket(4, &my_mem[4]);
+	set_prev_bucket(4, 4);
 
 	//Puts the Next block in bucket as 10 bits after
-	set_next_bucket(5, &my_mem[5]);
+	set_next_bucket(5, 5);
 
 	//makes the last bucket (16384 - 32767) store the address of the first index in the header
-	bucket[10] = &my_mem[0];
+	bucket[10] = 0;
 }
 
 //
@@ -163,17 +163,17 @@ void *half_alloc( int n )
 
 		//No space is available for allocation of a block of that size
 		if(counter == 11)
-			return -1;
+			return;
 
 		if (n + 4 > 0 && n + 4 <= 16*(2<<counter))
 		{
 			//This block of code creates a copy of the header of free mem and shifts it to the end of the newly alloced mem
 			//the size is changed to reflect the new smaller size of the free mem
 			//Difference of bucket and &my_mem[0] allows us to get the index in the array to store the new headers
-			int index = bucket[counter]-(int)&my_mem[0];
+			int index = bucket[counter];
 
 			//sets each part of the header 1 index from each other starting at index+n+4 which is the end of the now allocated n bytes of memory
-			set_prev(index+n+4, index+&my_mem[0]);
+			set_prev(index+n+4, index);
 			set_next(index+n+5, get_next(index+1));
 			set_block_size(index+n+6, get_block_size(index+2)-(n/32));
 			set_flag(index+n+7, get_flag(index+3));
@@ -215,7 +215,50 @@ void *half_alloc( int n )
 		}
 	}
 }
-/*
-void half_free( void * )
+
+void half_free( void * mem)
 {
-}*/
+	int index = mem;
+
+	//set flag to unallocated
+	set_flag(index+3, 0);
+	//checks the block ahead to see if it is empty and can be combined
+	if(get_flag(index+3+(get_block_size(index+2)))==0)
+	{
+		//eliminate headers of adjacent block and adjust the size and pointers
+		set_block_size(index+2, get_block_size(index+2)+get_block_size(get_next(index+1)+2));
+		set_next(index+1, get_next(get_next(index+1)));
+		set_prev(get_next(get_next(index+1)), get_prev(index));
+		//manipulate buckets if necessary (this includes changing bucket pointers)
+
+		//divides n by 32 to quickly determine the bucket in which the new block belongs in
+		int counter = 0;
+		while((get_block_size(index+2) > (16*(2<<counter)) && counter <= 10) || (bucket[counter] == NULL && counter <= 10))
+		{
+			counter++;
+		}
+		//new size belongs in the same bucket
+		if(bucket[counter])
+		{
+
+		}
+		//new size belongs in a different bucket
+		else if(0)
+		{
+			//connect the mem on the left and right together
+			set_next_bucket(get_prev_bucket(index+4+(get_block_size(index+2)))+5, get_next_bucket(index+5+(get_block_size(index+2))));
+			set_prev_bucket(get_next_bucket(index+5+(get_block_size(index+2)))+4, get_prev_bucket(index+4+(get_block_size(index+2))));
+		}
+	}
+	//checks the block behind to see if it is empty and can be combined
+	if(get_flag(get_prev(index)+3)==0)
+	{
+		//eliminate headers of adjacent block and adjust the size and pointers
+		set_block_size(get_prev(index)+2, get_block_size(get_prev(index)+2)+get_block_size(index+2));
+		set_next(get_prev(index)+1, get_next(get_next(index+1)));
+		set_prev(get_next(index+1), get_prev(index));
+		//manipulate buckets if necessary (this includes changing bucket pointers)
+	}
+	//change pointers from the previous and next block so they point to the right blocks
+	//add the new block to the bucket
+}
