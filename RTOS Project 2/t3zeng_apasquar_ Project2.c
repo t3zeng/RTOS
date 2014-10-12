@@ -23,13 +23,10 @@ int bucket[10] = {NULL};
 //my base address of the block
 int main(void)
 {
-	/*
 	half_init();
 	printf("%d\n", get_prev(0));
 	printf("%d\n", get_next(1));
 	printf("%d\n", get_block_size(2));
-	printf("%d\n", my_mem[2]);
-	get_block_size(2);*/
 
 	return 0;
 }
