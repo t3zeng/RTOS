@@ -80,41 +80,52 @@ U16 get_next_bucket(int index)
 void set_prev(int index, U16 prev)
 {
 	U16 temp = prev & 0x3;
+	my_mem[index+1] = my_mem[index+1] & 0x3F; // zeroes it before adding to it to ensure no garbage is there beforehand
 	my_mem[index+1] += temp << 6;
 	prev = prev >> 2;
+	my_mem[index] = my_mem[index] & 0x0;//zeroes it before adding
 	my_mem[index] += prev;
 }
 void set_next(int index, U16 next)
 {
 	U16 temp = next & 0xF;
+	my_mem[index+1] = my_mem[index+1] & 0xF;//zeroes it
 	my_mem[index+1] += temp << 4;
 	next = next >> 4;
+	my_mem[index] = my_mem[index] & 0xF0;//zeroes it
 	my_mem[index] += next;
 }
 void set_block_size(int index, U16 size)
 {
 	U16 temp = size & 0x3F;
+	my_mem[index+1] = my_mem[index+1] & 0xFC;
 	my_mem[index+1] += temp << 2;
 	size = size >> 6;
+	my_mem[index] = my_mem[index] & 0xC0;
 	my_mem[index] += size;
 }
 void set_flag(int index, U16 flag)
 {
 	flag = flag & 0x2;
+	my_mem[index] = my_mem[index] & 0x2;
 	my_mem[index] += my_mem[index] + flag;
 }
 void set_prev_bucket(int index, U16 prev_bucket)
 {
 	U16 temp = prev_bucket & 3;
+	my_mem[index+1] = my_mem[index+1] & 0x3F;
 	my_mem[index+1] += temp << 6;
 	prev_bucket = prev_bucket >> 2;
+	my_mem[index] = my_mem[index] & 0xFC;
 	my_mem[index] += prev_bucket;
 }
 void set_next_bucket(int index, U16 next_bucket)
 {
 	U16 temp = next_bucket & 0xF;
+	my_mem[index+1] = my_mem[index+1] & 0xF;
 	my_mem[index+1] += temp << 4;
 	next_bucket = next_bucket >> 4;
+	my_mem[index] = my_mem[index] & 0xF0;
 	my_mem[index] += next_bucket;
 }
 
