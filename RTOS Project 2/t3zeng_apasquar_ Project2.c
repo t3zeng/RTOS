@@ -31,6 +31,7 @@ int main(void)
 
 	return 0;
 }
+//note to self(set stuff to zero before adding stuff in)
 //Series of get functions to retrieve values from the block of memory
 U16 get_prev(int index)
 {
