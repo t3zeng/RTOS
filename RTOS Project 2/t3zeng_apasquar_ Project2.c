@@ -27,6 +27,7 @@ int main(void)
 	printf("%d\n", get_prev(0));
 	printf("%d\n", get_next(1));
 	printf("%d\n", get_block_size(2));
+	printf("%d\n", get_flag(3));
 
 	return 0;
 }
@@ -121,13 +122,13 @@ void half_init()
 {
 	//Initializes the first header block by using bit shifting
 	//Puts the prev block as 10 bits at the very front
-	set_prev(0, 0);
+	set_prev(0, 55);
 
 	//Puts the next block as 10 bits right beside the prev block
-	set_next(1, 1);
+	set_next(1, 111);
 
 	//Puts the block_size block as 10 bits right beside the next block
-	set_block_size(2, 1024);
+	set_block_size(2, 80);
 
 	//1 bit flag located right beside the block_size block
 	set_flag(3, 0);
