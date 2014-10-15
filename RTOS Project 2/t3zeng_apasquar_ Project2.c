@@ -26,24 +26,44 @@ int bucket[10] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
 int main(void)
 {
 	half_init();
-	half_alloc( 8100 );
+	half_alloc( 3213 );
 	half_alloc( 13215 );
-	half_free(0);
-	printf("\n\nHeader of the first block:\n");
-	printf("%d ", get_prev(0));
-	printf("%d ", get_next(0));
-	printf("%d ", get_block_size(0));
-	printf("%d ", get_flag(0));
-	printf("%d ", get_prev_bucket(0));
-	printf("%d ", get_next_bucket(0));
-	printf("\n\nHeader of the second block:\n");
-	printf("%d ", get_prev(get_next(0)));
-	printf("%d ", get_next(get_next(0)));
-	printf("%d ", get_block_size(get_next(0)));
-	printf("%d ", get_flag(get_next(0)));
-	printf("%d ", get_prev_bucket(get_next(0)));
-	printf("%d ", get_next_bucket(get_next(0)));
+	half_alloc( 8221 );
+	//half_alloc( 5123 );
+	//half_free(0);
+	//half_free(808);
+	int i;
+	printf("Buckets:\n");
+	for(i=0; i<= 10; i++)
+		printf("%d ", bucket[i]);
+	int index = 0;
+	int counter = 0;
+	while(get_next(index) != index)
+	{
+		printf("\n\nHeader of the %dth block:\n", counter+1);
+		printf("prev: %d ", get_prev(index));
+		printf("next: %d ", get_next(index));
+		printf("size: %d ", get_block_size(index));
+		printf("flag: %d ", get_flag(index));
+		if(!get_flag(index))
+		{
+			printf("prev bucket: %d ", get_prev_bucket(index));
+			printf("next bucket: %d ", get_next_bucket(index));
+		}
 
+		index = get_next(index);
+		counter++;
+	}
+	printf("\n\nHeader of the %dth block:\n", counter+1);
+	printf("prev: %d ", get_prev(index));
+	printf("next: %d ", get_next(index));
+	printf("size: %d ", get_block_size(index));
+	printf("flag: %d ", get_flag(index));
+	if(!get_flag(index))
+	{
+		printf("prev bucket: %d ", get_prev_bucket(index));
+		printf("next bucket: %d ", get_next_bucket(index));
+	}
 
 	return 0;
 }
@@ -149,8 +169,12 @@ void *half_alloc( int n )
 		n *= 32;
 		//divides n by 32 to quickly place things in a bucket
 		int counter = 0;
-		while((n > (16*(2<<counter)) && counter < 10) || (bucket[counter] == -1 && counter < 10)) // potential for error check after getting things in multiple buckets
+		while((n > (16*(2<<counter)) && counter <= 10) || (bucket[counter] == -1 && counter <= 10)) // potential for error check after getting things in multiple buckets
+		{
+			printf("check this out %d\n", (bucket[counter] == -1 && counter < 10));
 			counter++;
+		}
+		printf("this should be 8: %d\n", n);
 		//No space is available for allocation of a block of that size
 		if(counter == 11)
 			printf("ERROR:NOT ENOUGH MEMORY AVAILABLE");
@@ -160,7 +184,6 @@ void *half_alloc( int n )
 			{
 				//This block of code creates a copy of the header of free mem and shifts it to the end of the newly alloced mem
 				//the size is changed to reflect the new smaller size of the free mem
-				//Difference of bucket and &my_mem[0] allows us to get the index in the array to store the new headers
 				int index = bucket[counter];
 
 				//sets each part of the header 1 index from each other starting at index+n+4 which is the end of the now allocated n bytes of memory
@@ -182,12 +205,14 @@ void *half_alloc( int n )
 				//Checks if the remaining memory after allocation is enough to form a new block of free memory with a header and creates them
 				if((int)(get_block_size(index+(int)ceil(n/4.0))-(int)ceil(n/32.0)) >= (8*(2<<counter))/32 + 4)
 				{
+					printf("1 %d\n", n);
 					//change bucket[counter]'s address to newly located header
 					bucket[counter] += (int)ceil(n/4.0);
 				}
 				//handles the case where the new the memory must be placed in a smaller bucket
 				else if((int)(get_block_size(index+(int)ceil(n/4.0)) - (int)ceil(n/32.0)) < (8*(2<<counter))/32 + 4)
 				{
+					printf("2 %d\n", n);
 					int temp = bucket[counter];
 					//remove the memory slot from the previous bucket
 					if(get_next_bucket(bucket[counter]) != bucket[counter])
@@ -202,15 +227,18 @@ void *half_alloc( int n )
 						counter--;
 					//sets the address of the new bucket to where the new block of memory is
 					bucket[counter] = temp;
+					bucket[counter] += (int)ceil(n/4.0);
 				}
 				//in the event that there isn't enough remaining free memory to create a new block, the bucket will now point to the next free memory block in the bucket
 				else if(get_next_bucket(index) != -1)
 				{
+					printf("3 %d\n", n);
 					bucket[counter] = get_next_bucket(index);
 				}
 				//if there are no more free blocks of memory left, the bucket will be empty and return -1 when called
 				else
 				{
+					printf("4 %d\n", n);
 					bucket[counter] = -1;
 				}
 				//changes the size of the new blocks accordingly, set the flags and relocate pointers
@@ -237,12 +265,11 @@ void half_free( void * index)
 		//handle case in which there are no free blocks adjacent to the block about to be freed
 		if(get_flag(get_next(index))!=0 && get_flag(get_prev(index))!=0)
 		{
+			printf("no blocks adjacent\n");
 			//find where to place the newest member of the bucket
 			int current_index = bucket[original_bucket];
 			while(index > current_index && (get_next_bucket(current_index) != current_index))
 				current_index = get_next_bucket(current_index);
-			printf("current index: %d\n", current_index);
-			printf("index: %d\n", index);
 
 			//handle case where current_index was the first thing in the bucket
 			if(bucket[original_bucket] == current_index)
@@ -267,6 +294,7 @@ void half_free( void * index)
 		//checks the block ahead to see if it is empty and can be combined
 		if(get_flag(get_next(index))==0)
 		{
+			printf("block on right\n");
 			//eliminate headers of adjacent block and adjust the size and pointers
 			set_block_size(index, get_block_size(index)+get_block_size(get_next(index)));
 			set_next(index, get_next(get_next(index)));
@@ -275,7 +303,7 @@ void half_free( void * index)
 			//manipulate buckets if necessary (this includes changing bucket pointers)
 			//divides n by 32 once more to see if the memory should still go in the same bucket
 			int new_bucket = 0;
-			while((get_block_size(index) > (16*(2<<new_bucket)) && new_bucket < 10))
+			while((get_block_size(index)*32 > (16*(2<<new_bucket)) && new_bucket < 10))
 				new_bucket++;
 			//new size belongs in the same bucket
 			if(new_bucket == original_bucket)
@@ -345,6 +373,7 @@ void half_free( void * index)
 		//checks the block behind to see if it is empty and can be combined
 		if(get_flag(get_prev(index))==0)
 		{
+			printf("block on left\n");
 			//eliminate headers of adjacent block and adjust the size and pointers
 			set_block_size(get_prev(index), get_block_size(get_prev(index))+get_block_size(index));
 			set_next(get_prev(index), get_next(get_next(index)));
@@ -353,9 +382,8 @@ void half_free( void * index)
 			//manipulate buckets if necessary (this includes changing bucket pointers)
 			//divides n by 32 once more to see if the memory should still go in the same bucket
 			int new_bucket = 0;
-			while((get_block_size(get_prev(index)) > (16*(2<<new_bucket)) && new_bucket <= 10))
+			while((get_block_size(get_prev(index))*32 > (16*(2<<new_bucket)) && new_bucket <= 10))
 				new_bucket++;
-			printf("4");
 			//unlike the case where there is memory free after the memory inputed, this case does not require adjustments to the pointers if a bucket change is not required
 			if(new_bucket != original_bucket)
 			{
@@ -381,7 +409,6 @@ void half_free( void * index)
 				int current_index = bucket[new_bucket];
 				while(index > get_next_bucket(current_index) && (get_next_bucket(current_index) != current_index))
 					current_index = get_next_bucket(current_index);
-				printf("5");
 				//handle the case in which current_index is the first block of memory in the bucket and index comes before it
 				if(current_index == bucket[new_bucket])
 				{
