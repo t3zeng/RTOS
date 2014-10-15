@@ -19,15 +19,16 @@ typedef unsigned long U64;
 U32 my_mem [8192];
 
 //INITIALIZE THE BUCKETS
-int bucket[10] = {NULL};
+int bucket[10] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
 
 //my base address of the block
-/*
+
 int main(void)
 {
 	half_init();
 	half_alloc( 8100 );
 	half_alloc( 13215 );
+	half_free(0);
 	printf("\n\nHeader of the first block:\n");
 	printf("%d ", get_prev(0));
 	printf("%d ", get_next(0));
@@ -45,7 +46,7 @@ int main(void)
 
 
 	return 0;
-}*/
+}
 //Series of get functions to retrieve values from the block of memory
 
 U32 get_prev(int index)
@@ -148,9 +149,8 @@ void *half_alloc( int n )
 		n *= 32;
 		//divides n by 32 to quickly place things in a bucket
 		int counter = 0;
-		while((n > (16*(2<<counter)) && counter < 10) || (bucket[counter] == NULL && counter < 10)) // potential for error check after getting things in multiple buckets
+		while((n > (16*(2<<counter)) && counter < 10) || (bucket[counter] == -1 && counter < 10)) // potential for error check after getting things in multiple buckets
 			counter++;
-		//printf("%d\n", counter);
 		//No space is available for allocation of a block of that size
 		if(counter == 11)
 			printf("ERROR:NOT ENOUGH MEMORY AVAILABLE");
@@ -176,7 +176,8 @@ void *half_alloc( int n )
 				//check if the block is the last in the bucket
 				if(get_next_bucket(index) == index)
 					set_next_bucket(index+(int)ceil(n/4.0), index+(int)ceil(n/4.0));
-				set_next_bucket(index+(int)ceil(n/4.0), get_next_bucket(index));
+				else
+					set_next_bucket(index+(int)ceil(n/4.0), get_next_bucket(index));
 
 				//Checks if the remaining memory after allocation is enough to form a new block of free memory with a header and creates them
 				if((int)(get_block_size(index+(int)ceil(n/4.0))-(int)ceil(n/32.0)) >= (8*(2<<counter))/32 + 4)
@@ -188,23 +189,28 @@ void *half_alloc( int n )
 				else if((int)(get_block_size(index+(int)ceil(n/4.0)) - (int)ceil(n/32.0)) < (8*(2<<counter))/32 + 4)
 				{
 					int temp = bucket[counter];
-					//since the new block size has been confirmed to be smaller, counter is adjusted to reflect the change
-					while(get_block_size(index+(int)ceil(n/4.0)) < (16*(2<<counter)) && counter >= 0)
+					//remove the memory slot from the previous bucket
+					bucket[counter] = -1;
+					if(get_next_bucket(bucket[counter]) != bucket[counter])
 					{
-						counter--;
+						bucket[counter] = get_next_bucket(bucket[counter]);
+						set_prev_bucket(bucket[counter], bucket[counter]);
 					}
+					//since the new block size has been confirmed to be smaller, counter is adjusted to reflect the change
+					while(get_block_size(index+(int)ceil(n/4.0))*32 < (16*(2<<counter)) && counter >= 0)
+						counter--;
 					//sets the address of the new bucket to where the new block of memory is
 					bucket[counter] = temp;
 				}
 				//in the event that there isn't enough remaining free memory to create a new block, the bucket will now point to the next free memory block in the bucket
-				else if(get_next_bucket(index) != NULL)
+				else if(get_next_bucket(index) != -1)
 				{
 					bucket[counter] = get_next_bucket(index);
 				}
-				//if there are no more free blocks of memory left, the bucket will be empty and return NULL when called
+				//if there are no more free blocks of memory left, the bucket will be empty and return -1 when called
 				else
 				{
-					bucket[counter] = NULL;
+					bucket[counter] = -1;
 				}
 				//changes the size of the new blocks accordingly, set the flags and relocate pointers
 				set_block_size(index, (int)ceil(n/32.0));
@@ -218,152 +224,179 @@ void *half_alloc( int n )
 
 void half_free( void * index)
 {
-
-	//set flag to unallocated
-	set_flag(index, 0);
-	//divides n by 32 to quickly determine the bucket in which the new block belongs in
-	int original_bucket = 0;
-	while((get_block_size(index) > (16*(2<<original_bucket)) && original_bucket <= 10) || (bucket[original_bucket] == NULL && original_bucket <= 10))
-		original_bucket++;
-	//put pointers to point the new memory to the bucket
-
-	//checks the block ahead to see if it is empty and can be combined
-	if(get_flag(index+(get_block_size(index)))==0)
+	if(get_flag(index) == 0)
+		printf("ERROR: MEMORY IS ALREADY FREE");
+	else
 	{
-		//eliminate headers of adjacent block and adjust the size and pointers
-		set_block_size(index, get_block_size(index)+get_block_size(get_next(index)));
-		set_next(index, get_next(get_next(index)));
-		set_prev(get_next(get_next(index)), get_prev(index));
+		//set flag to unallocated
+		set_flag(index, 0);
+		//divides n by 32 to quickly determine the bucket in which the new block belongs in
+		int original_bucket = 0;
+		while((get_block_size(index)*32 > (16*(2<<original_bucket)) && original_bucket <= 10))
+			original_bucket++;
 
-		//manipulate buckets if necessary (this includes changing bucket pointers)
-		//divides n by 32 once more to see if the memory should still go in the same bucket
-		int new_bucket = 0;
-		while((get_block_size(index) > (16*(2<<new_bucket)) && new_bucket < 10) || (bucket[new_bucket] == NULL && new_bucket < 10))
-			new_bucket++;
-		//new size belongs in the same bucket
-		if(new_bucket == original_bucket)
+		int i;
+		for(i = 0; i< 11; i++)
+			printf("%d   ", bucket[i]);
+
+		//handle case in which there are no free blocks adjacent to the block about to be freed
+		if(get_flag(index+(get_block_size(index)))!=0 && get_flag(get_prev(index))!=0)
 		{
-			//replace pointers in header of second block and put them in first block as it will be located in the same spot in the bucket
-			set_next_bucket(index, get_next_bucket(index+(get_block_size(index))));
-			set_prev_bucket(index, get_prev_bucket(index+(get_block_size(index))));
-
-			//need to add pointers from other free mem to point back
-		}
-		//new size belongs in a different bucket
-		else
-		{
-			//check if the memory is the first in its bucket
-			if(get_prev_bucket(index+(get_block_size(index))) == index+(get_block_size(index)))
-			{
-				//make the next thing in that bucket point to itself on prev
-				set_prev_bucket(get_next_bucket(index+(get_block_size(index))), index+(get_block_size(index)));
-				//set the bucket to point to that free memory
-			}
-			//check if the memory is the last in its bucket
-			else if(get_next_bucket(index+(get_block_size(index))) == index+(get_block_size(index)))
-			{
-				set_next_bucket(get_prev_bucket(index+(get_block_size(index))), index+(get_block_size(index)));
-			}
-			//connect the mem on the left and right together which would eliminate the memory from the bucket unless it was the first or last
-			else
-			{
-				set_next_bucket(get_prev_bucket(index+(get_block_size(index))), get_next_bucket(index+(get_block_size(index))));
-				set_prev_bucket(get_next_bucket(index+(get_block_size(index))), get_prev_bucket(index+(get_block_size(index))));
-			}
-
-			//creates an integer to track the index of the block of memory in the bucket that comes after the index of the newly allocated block
-			int current_index = bucket[new_bucket];
-			while(index > get_next_bucket(current_index) && (get_next_bucket(current_index) !=current_index)) // check this != statement
+			//find where to place the newest member of the bucket
+			int current_index = bucket[original_bucket];
+			while(index > current_index && (get_next_bucket(current_index) != current_index))
 				current_index = get_next_bucket(current_index);
-			//handle the case in which current_index is the first block of memory in the bucket and index comes before it
-			if(current_index == bucket[new_bucket])
+			printf("index: %d\n", current_index);
+			//put pointers to point the new memory to the bucket
+			set_prev_bucket(current_index, index);
+			set_next_bucket(index, current_index);
+			//handle case where current_index was the first thing in the bucket
+			if(bucket[original_bucket] == current_index)
+				bucket[original_bucket] == index;
+		}
+
+		//checks the block ahead to see if it is empty and can be combined
+		if(get_flag(index+(get_block_size(index)))==0)
+		{
+			//eliminate headers of adjacent block and adjust the size and pointers
+			set_block_size(index, get_block_size(index)+get_block_size(get_next(index)));
+			set_next(index, get_next(get_next(index)));
+			set_prev(get_next(get_next(index)), get_prev(index));
+
+			//manipulate buckets if necessary (this includes changing bucket pointers)
+			//divides n by 32 once more to see if the memory should still go in the same bucket
+			int new_bucket = 0;
+			while((get_block_size(index) > (16*(2<<new_bucket)) && new_bucket < 10))
+				new_bucket++;
+			printf("2");
+			//new size belongs in the same bucket
+			if(new_bucket == original_bucket)
 			{
-				//since the index is located before the first block in the bucket, it becomes the new first block (prev points to itself and next points to old first mem in bucket)
-				bucket[new_bucket] = index;
-				set_prev_bucket(index, index);
-				set_next_bucket(index, current_index);
+				//replace pointers in header of second block and put them in first block as it will be located in the same spot in the bucket
+				set_next_bucket(index, get_next_bucket(index+(get_block_size(index))));
+				set_prev_bucket(index, get_prev_bucket(index+(get_block_size(index))));
+
+				//need to add pointers from other free mem to point back
 			}
-			//handle case where current_index is the last block of memory in the bucket and index comes after
-			else if(current_index < index)
-			{
-				//This happens when the loop reached the end and index is still greater
-				set_next_bucket(current_index, index);
-				set_next_bucket(index, index);
-				set_prev_bucket(index, current_index);
-			}
-			//handles case where current_index is somewhere in the middle
+			//new size belongs in a different bucket
 			else
 			{
-				//current_index at this point will point to the free mem after the one at index
-				set_next_bucket(index, current_index);
-				set_prev_bucket(index, get_prev_bucket(current_index));
-				set_next_bucket(get_prev_bucket(index), index);
-				set_prev_bucket(current_index, index);
+				//check if the memory is the first in its bucket
+				if(get_prev_bucket(index+(get_block_size(index))) == index+(get_block_size(index)))
+				{
+					//make the next thing in that bucket point to itself on prev
+					set_prev_bucket(get_next_bucket(index+(get_block_size(index))), index+(get_block_size(index)));
+					//set the bucket to point to that free memory
+				}
+				//check if the memory is the last in its bucket
+				else if(get_next_bucket(index+(get_block_size(index))) == index+(get_block_size(index)))
+				{
+					set_next_bucket(get_prev_bucket(index+(get_block_size(index))), index+(get_block_size(index)));
+				}
+				//connect the mem on the left and right together which would eliminate the memory from the bucket unless it was the first or last
+				else
+				{
+					set_next_bucket(get_prev_bucket(index+(get_block_size(index))), get_next_bucket(index+(get_block_size(index))));
+					set_prev_bucket(get_next_bucket(index+(get_block_size(index))), get_prev_bucket(index+(get_block_size(index))));
+				}
+
+				//creates an integer to track the index of the block of memory in the bucket that comes after the index of the newly allocated block
+				int current_index = bucket[new_bucket];
+				while(index > get_next_bucket(current_index) && (get_next_bucket(current_index) != current_index))
+					current_index = get_next_bucket(current_index);
+				printf("3");
+				//handle the case in which current_index is the first block of memory in the bucket and index comes before it
+				if(current_index == bucket[new_bucket])
+				{
+					//since the index is located before the first block in the bucket, it becomes the new first block (prev points to itself and next points to old first mem in bucket)
+					bucket[new_bucket] = index;
+					set_prev_bucket(index, index);
+					set_next_bucket(index, current_index);
+				}
+				//handle case where current_index is the last block of memory in the bucket and index comes after
+				else if(current_index < index)
+				{
+					//This happens when the loop reached the end and index is still greater
+					set_next_bucket(current_index, index);
+					set_next_bucket(index, index);
+					set_prev_bucket(index, current_index);
+				}
+				//handles case where current_index is somewhere in the middle
+				else
+				{
+					//current_index at this point will point to the free mem after the one at index
+					set_next_bucket(index, current_index);
+					set_prev_bucket(index, get_prev_bucket(current_index));
+					set_next_bucket(get_prev_bucket(index), index);
+					set_prev_bucket(current_index, index);
+				}
 			}
 		}
-	}
-	//checks the block behind to see if it is empty and can be combined
-	if(get_flag(get_prev(index))==0)
-	{
-		//eliminate headers of adjacent block and adjust the size and pointers
-		set_block_size(get_prev(index), get_block_size(get_prev(index))+get_block_size(index));
-		set_next(get_prev(index), get_next(get_next(index)));
-		set_prev(get_next(index), get_prev(index));
-
-		//manipulate buckets if necessary (this includes changing bucket pointers)
-		//divides n by 32 once more to see if the memory should still go in the same bucket
-		int new_bucket = 0;
-		while((get_block_size(get_prev(index)) > (16*(2<<new_bucket)) && new_bucket <= 10) || (bucket[new_bucket] == NULL && new_bucket <= 10))
-			new_bucket++;
-		//unlike the case where there is memory free after the memory inputed, this case does not require adjustments to the pointers if a bucket change is not required
-		if(new_bucket != original_bucket)
+		//checks the block behind to see if it is empty and can be combined
+		if(get_flag(get_prev(index))==0)
 		{
-			//check if the memory is the first in its bucket
-			if(get_prev_bucket(get_prev(index)) == get_prev(index))
-			{
-				//make the next thing in that bucket point to itself on prev
-				set_prev_bucket(get_next_bucket(get_prev(index)), get_prev(index));
-			}
-			//check if the memory is the last in its bucket
-			else if(get_next_bucket(get_prev(index)) == get_prev(index))
-			{
-				set_next_bucket(get_prev_bucket(get_prev(index)), get_prev(index));
-			}
-			//connect the mem on the left and right together which would eliminate the memory from the bucket unless it was the first or last
-			else
-			{
-				set_next_bucket(get_prev_bucket(get_prev(index)), get_next_bucket(get_prev(index)));
-				set_prev_bucket(get_next_bucket(get_prev(index)), get_prev_bucket(get_prev(index)));
-			}
+			//eliminate headers of adjacent block and adjust the size and pointers
+			set_block_size(get_prev(index), get_block_size(get_prev(index))+get_block_size(index));
+			set_next(get_prev(index), get_next(get_next(index)));
+			set_prev(get_next(index), get_prev(index));
 
-			//creates an integer to track the index of the block of memory in the bucket that comes after the index of the newly allocated block
-			int current_index = bucket[new_bucket];
-			while(index > get_next_bucket(current_index) && (get_next_bucket(current_index) != current_index))
-				current_index = get_next_bucket(current_index);
-			//handle the case in which current_index is the first block of memory in the bucket and index comes before it
-			if(current_index == bucket[new_bucket])
+			//manipulate buckets if necessary (this includes changing bucket pointers)
+			//divides n by 32 once more to see if the memory should still go in the same bucket
+			int new_bucket = 0;
+			while((get_block_size(get_prev(index)) > (16*(2<<new_bucket)) && new_bucket <= 10))
+				new_bucket++;
+			printf("4");
+			//unlike the case where there is memory free after the memory inputed, this case does not require adjustments to the pointers if a bucket change is not required
+			if(new_bucket != original_bucket)
 			{
-				//since the index is located before the first block in the bucket, it becomes the new first block (prev points to itself and next points to old first mem in bucket)
-				bucket[new_bucket] = get_prev(index);
-				set_prev_bucket(get_prev(index), get_prev(index));
-				set_next_bucket(get_prev(index), current_index);
-			}
-			//handle case where current_index is the last block of memory in the bucket and index comes after
-			else if(current_index < index)
-			{
-				//This happens when the loop reached the end and index is still greater
-				set_next_bucket(current_index, get_prev(index));
-				set_next_bucket(get_prev(index), get_prev(index));
-				set_prev_bucket(get_prev(index), current_index);
-			}
-			//handles case where current_index is somewhere in the middle
-			else
-			{
-				//current_index at this point will point to the free mem after the one at index
-				set_next_bucket(get_prev(index), current_index);
-				set_prev_bucket(get_prev(index), get_prev_bucket(current_index));
-				set_next_bucket(get_prev_bucket(get_prev(index)), get_prev(index));
-				set_prev_bucket(current_index, get_prev(index));
+				//check if the memory is the first in its bucket
+				if(get_prev_bucket(get_prev(index)) == get_prev(index))
+				{
+					//make the next thing in that bucket point to itself on prev
+					set_prev_bucket(get_next_bucket(get_prev(index)), get_prev(index));
+				}
+				//check if the memory is the last in its bucket
+				else if(get_next_bucket(get_prev(index)) == get_prev(index))
+				{
+					set_next_bucket(get_prev_bucket(get_prev(index)), get_prev(index));
+				}
+				//connect the mem on the left and right together which would eliminate the memory from the bucket unless it was the first or last
+				else
+				{
+					set_next_bucket(get_prev_bucket(get_prev(index)), get_next_bucket(get_prev(index)));
+					set_prev_bucket(get_next_bucket(get_prev(index)), get_prev_bucket(get_prev(index)));
+				}
+
+				//creates an integer to track the index of the block of memory in the bucket that comes after the index of the newly allocated block
+				int current_index = bucket[new_bucket];
+				while(index > get_next_bucket(current_index) && (get_next_bucket(current_index) != current_index))
+					current_index = get_next_bucket(current_index);
+				printf("5");
+				//handle the case in which current_index is the first block of memory in the bucket and index comes before it
+				if(current_index == bucket[new_bucket])
+				{
+					//since the index is located before the first block in the bucket, it becomes the new first block (prev points to itself and next points to old first mem in bucket)
+					bucket[new_bucket] = get_prev(index);
+					set_prev_bucket(get_prev(index), get_prev(index));
+					set_next_bucket(get_prev(index), current_index);
+				}
+				//handle case where current_index is the last block of memory in the bucket and index comes after
+				else if(current_index < index)
+				{
+					//This happens when the loop reached the end and index is still greater
+					set_next_bucket(current_index, get_prev(index));
+					set_next_bucket(get_prev(index), get_prev(index));
+					set_prev_bucket(get_prev(index), current_index);
+				}
+				//handles case where current_index is somewhere in the middle
+				else
+				{
+					//current_index at this point will point to the free mem after the one at index
+					set_next_bucket(get_prev(index), current_index);
+					set_prev_bucket(get_prev(index), get_prev_bucket(current_index));
+					set_next_bucket(get_prev_bucket(get_prev(index)), get_prev(index));
+					set_prev_bucket(current_index, get_prev(index));
+				}
 			}
 		}
 	}
