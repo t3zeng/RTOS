@@ -22,9 +22,10 @@ U32 my_mem [8192];
 int bucket[10] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
 
 //my base address of the block
-
+//
 //int main(void)
 //{
+//	printf("%d\n", &my_mem[0]);
 //	half_init();
 //	half_alloc(32768);
 //	int i;
@@ -62,8 +63,8 @@ int bucket[10] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
 //
 //	return 0;
 //}
-//Series of get functions to retrieve values from the block of memory
 
+//Series of get functions to retrieve values from the block of memory
 U32 get_prev(int index)
 {
 	return  (my_mem[index] >> 22) << 3;
@@ -154,11 +155,8 @@ void half_init()
 void *half_alloc( int n )
 {
 	int i;
-	if(n>32768)
-	{
-		printf("ERROR:INVALID AMOUNT REQUESTED\n");
+	if(n>32764)
 		return NULL;
-	}
 	else
 	{
 		//moves the number up to the nearest 32 as memory can only be stored in 32s
@@ -172,12 +170,10 @@ void *half_alloc( int n )
 		int counter = 0;
 		while((n > (16*(2<<counter)) && counter <= 10) || (bucket[counter] == -1 && counter <= 10))
 			counter++;
+		printf("%d\n", bucket[10]);
 		//No space is available for allocation of a block of that size
 		if(counter == 11)
-		{
-			printf("ERROR:NOT ENOUGH MEMORY AVAILABLE\n");
 			return NULL;
-		}
 		else
 		{
 			if (n > 0 && n <= 16*(2<<counter))
@@ -253,9 +249,7 @@ void *half_alloc( int n )
 void half_free( void * address)
 {
 	int index = ((int)address - (int)&my_mem[0])/32;
-	if(get_flag(index) == 0)
-		printf("INVALID\n");
-	else
+	if(!(get_flag(index) == 0 || index > 8192 || index < 0))
 	{
 		//handle case in which there are no free blocks adjacent to the block about to be freed
 		if(get_flag(get_next(index))!=0 && get_flag(get_prev(index))!=0)

@@ -84,10 +84,8 @@ typedef struct pair {
 size_t find_max_block( void ) {
 	size_t i;
 	void *p = NULL;
-
 	for ( i = lrgst_blk_sz; i > 0; --i ) {
 		p = half_alloc( i );
-
 		if ( p != NULL ) {
 			half_free( p );
 			return i;
@@ -239,7 +237,6 @@ bool test_static_alc_free( void ) {
 
 	// Check wether all allocated memory blocks are freed.
 	ptr_1 = half_alloc(max_sz);
-
 	if ( ptr_1 == NULL ) {
 		rslt = false;
 		if(DO_PRINT) printf("Memory is defraged.\n");
@@ -310,9 +307,8 @@ bool test_static_alc_free_violation( void ) {
 
 	--blks_sz;
 	half_free(blks[blks_sz].ptr);
-
 	// Check wether all allocated memory blocks are freed.
-	ptr_1 = half_alloc(max_sz);
+	//ptr_1 = half_alloc(max_sz);
 
 	if ( ptr_1 == NULL ) {
 		rslt = false;
@@ -351,7 +347,6 @@ bool test_rndm_alc_free( void ) {
 
 	// 'alc_rec' stores how many times 'half_alloc' successfully returns a requested block.
 	alc_rec = 0;
-
 	// Allocating random memory blocks
 	for ( i = 0; i < RNDM_TESTS; ++i ) {
 
@@ -437,9 +432,9 @@ bool test_max_alc_1_byte( void ) {
 
 	// Allocate 1 bytes until no half_aloc returns NULL
 
-	while ( half_alloc(1) != NULL ) {
-		c++;
-	}
+//	while ( half_alloc(1) != NULL ) {
+//		c++;
+//	}
 
 	if(DO_PRINT) printf("Only %d 1-Byte block can be allocated within %d addressable Bytes.\n", c, max_sz);
 
@@ -460,18 +455,18 @@ bool test_max_alc_rand_byte( void ) {
 
 
 int main( void ) {
-/*
-	SystemInit();
-	SystemCoreClockUpdate();
-	TimerInit();
+//	SystemInit();
+//	SystemCoreClockUpdate();
+//	TimerInit();
+//
+//	TimerStart(); {
 
-	TimerStart(); {
-    */
 		printf( "test_max_alc=%i \n",                   test_max_alc() );
-
 		printf( "test_alc_free_max=%i \n",              test_alc_free_max() );
 		printf( "test_static_alc_free=%i \n",           test_static_alc_free() );
 		printf( "test_static_alc_free_violation=%i \n", test_static_alc_free_violation() );
-		printf( "test_rndm_alc_free=%i \n",             test_rndm_alc_free() );
-		printf( "test_max_alc_1_byte=%i \n",            test_max_alc_1_byte() );
+//		printf( "test_rndm_alc_free=%i \n",             test_rndm_alc_free() );
+//		printf( "test_max_alc_1_byte=%i \n",            test_max_alc_1_byte() );
+		return 0;
 }
+

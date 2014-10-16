@@ -29,6 +29,6 @@ void set_block_size(int index, U32 size);
 void set_flag(int index, U32 flag);
 void set_prev_bucket(int index, U32 prev_bucket);
 void set_next_bucket(int index, U32 next_bucket);
-void  half_free( void * mem);
+void  half_free( void * address);
 
 #endif
