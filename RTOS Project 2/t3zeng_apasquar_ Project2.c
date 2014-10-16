@@ -1,5 +1,5 @@
 //REMINDER TO DOUBLE CHECK THE GETTERS AND SETTERS TO ENSURE THAT THEY PUT EVERYTHING IN THE 4 BYTE HEADER PROPERLY.
-//Hours spent: 41
+//Hours spent: 48
 #include "half_fit.h"
 #include <stdint.h>
 #include <stdio.h>
@@ -23,50 +23,45 @@ int bucket[10] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
 
 //my base address of the block
 
-int main(void)
-{
-	half_init();
-	half_alloc(3213);
-	half_alloc(13215);
-	half_alloc(8221);
-	//half_free(0);
-	half_free(808);
-	half_free(4112);
-	int i;
-	printf("Buckets:\n");
-	for(i=0; i<= 10; i++)
-		printf("Address of bucket %d is: %d\n",i, bucket[i]);
-	int index = 0;
-	int counter = 0;
-	while(get_next(index) != index)
-	{
-		printf("\n\nHeader of the %dth block:\n", counter+1);
-		printf("prev: %d ", get_prev(index));
-		printf("next: %d ", get_next(index));
-		printf("size: %d ", get_block_size(index));
-		printf("flag: %d ", get_flag(index));
-		if(!get_flag(index))
-		{
-			printf("prev bucket: %d ", get_prev_bucket(index));
-			printf("next bucket: %d ", get_next_bucket(index));
-		}
-
-		index = get_next(index);
-		counter++;
-	}
-	printf("\n\nHeader of the %dth block:\n", counter+1);
-	printf("prev: %d ", get_prev(index));
-	printf("next: %d ", get_next(index));
-	printf("size: %d ", get_block_size(index));
-	printf("flag: %d ", get_flag(index));
-	if(!get_flag(index))
-	{
-		printf("prev bucket: %d ", get_prev_bucket(index));
-		printf("next bucket: %d ", get_next_bucket(index));
-	}
-
-	return 0;
-}
+//int main(void)
+//{
+//	half_init();
+//	half_alloc(32768);
+//	int i;
+//	printf("Buckets:\n");
+//	for(i=0; i<= 10; i++)
+//		printf("Address of bucket %d is: %d\n",i, bucket[i]);
+//	int index = 0;
+//	int counter = 0;
+//	while(get_next(index) != index)
+//	{
+//		printf("\n\nHeader of the %dth block:\n", counter+1);
+//		printf("prev: %d ", get_prev(index));
+//		printf("next: %d ", get_next(index));
+//		printf("size: %d ", get_block_size(index));
+//		printf("flag: %d ", get_flag(index));
+//		if(!get_flag(index))
+//		{
+//			printf("prev bucket: %d ", get_prev_bucket(index));
+//			printf("next bucket: %d ", get_next_bucket(index));
+//		}
+//
+//		index = get_next(index);
+//		counter++;
+//	}
+//	printf("\n\nHeader of the %dth block:\n", counter+1);
+//	printf("prev: %d ", get_prev(index));
+//	printf("next: %d ", get_next(index));
+//	printf("size: %d ", get_block_size(index));
+//	printf("flag: %d ", get_flag(index));
+//	if(!get_flag(index))
+//	{
+//		printf("prev bucket: %d ", get_prev_bucket(index));
+//		printf("next bucket: %d ", get_next_bucket(index));
+//	}
+//
+//	return 0;
+//}
 //Series of get functions to retrieve values from the block of memory
 
 U32 get_prev(int index)
@@ -162,14 +157,17 @@ void *half_alloc( int n )
 	if(n>32768)
 	{
 		printf("ERROR:INVALID AMOUNT REQUESTED\n");
-		return -1;
+		return NULL;
 	}
 	else
 	{
 		//moves the number up to the nearest 32 as memory can only be stored in 32s
-		n /= 32;
-		n++;
-		n *= 32;
+		if(n%32 !=0)
+		{
+			n /= 32;
+			n++;
+			n *= 32;
+		}
 		//divides n by 32 to quickly place things in a bucket
 		int counter = 0;
 		while((n > (16*(2<<counter)) && counter <= 10) || (bucket[counter] == -1 && counter <= 10))
@@ -178,11 +176,11 @@ void *half_alloc( int n )
 		if(counter == 11)
 		{
 			printf("ERROR:NOT ENOUGH MEMORY AVAILABLE\n");
-			return -1;
+			return NULL;
 		}
 		else
 		{
-			if (n + 4 > 0 && n + 4 <= 16*(2<<counter))
+			if (n > 0 && n <= 16*(2<<counter))
 			{
 				//This block of code creates a copy of the header of free mem and shifts it to the end of the newly alloced mem
 				//the size is changed to reflect the new smaller size of the free mem
@@ -246,17 +244,17 @@ void *half_alloc( int n )
 				return &my_mem[0]+index;
 			}
 			else
-				return -1;
+				return NULL;
 		}
 	}
 }
 
 
-void half_free( void * index)
+void half_free( void * address)
 {
-
+	int index = ((int)address - (int)&my_mem[0])/32;
 	if(get_flag(index) == 0)
-		printf("ERROR: MEMORY IS ALREADY FREE");
+		printf("INVALID\n");
 	else
 	{
 		//handle case in which there are no free blocks adjacent to the block about to be freed
