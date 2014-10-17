@@ -312,7 +312,7 @@ bool test_static_alc_free_violation( void ) {
 	half_free(blks[blks_sz].ptr);
 
 	// Check wether all allocated memory blocks are freed.
-	ptr_1 = half_alloc(max_sz);
+//	ptr_1 = half_alloc(max_sz);
 
 	if ( ptr_1 == NULL ) {
 		rslt = false;
@@ -459,19 +459,19 @@ bool test_max_alc_rand_byte( void ) {
 }
 
 
-//int main( void ) {
-///*
-//	SystemInit();
-//	SystemCoreClockUpdate();
-//	TimerInit();
-//
-//	TimerStart(); {
-//    */
-//		printf( "test_max_alc=%i \n",                   test_max_alc() );
-//
-//		printf( "test_alc_free_max=%i \n",              test_alc_free_max() );
-//		printf( "test_static_alc_free=%i \n",           test_static_alc_free() );
-////		printf( "test_static_alc_free_violation=%i \n", test_static_alc_free_violation() );
-////		printf( "test_rndm_alc_free=%i \n",             test_rndm_alc_free() );
-////		printf( "test_max_alc_1_byte=%i \n",            test_max_alc_1_byte() );
-//}
+int main( void ) {
+/*
+	SystemInit();
+	SystemCoreClockUpdate();
+	TimerInit();
+
+	TimerStart(); {
+    */
+		printf( "test_max_alc=%i \n",                   test_max_alc() );
+
+		printf( "test_alc_free_max=%i \n",              test_alc_free_max() );
+		printf( "test_static_alc_free=%i \n",           test_static_alc_free() );
+		printf( "test_static_alc_free_violation=%i \n", test_static_alc_free_violation() );
+//		printf( "test_rndm_alc_free=%i \n",             test_rndm_alc_free() );
+//		printf( "test_max_alc_1_byte=%i \n",            test_max_alc_1_byte() );
+}

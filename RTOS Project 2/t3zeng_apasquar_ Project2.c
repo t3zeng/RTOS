@@ -21,50 +21,6 @@ U32 my_mem [8192];
 //INITIALIZE THE BUCKETS
 int bucket[11] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
 
-//my base address of the block
-
-int main(void)
-{
-	half_init();
-	half_alloc(3121);
-	half_alloc(512);
-	half_alloc(5212);
-
-	int i;
-	printf("Buckets:\n");
-	for(i=0; i<= 10; i++)
-		printf("Address of bucket %d is: %d\n",i, bucket[i]);
-	int index = 0;
-	int counter = 0;
-	while(get_next(index) != index)
-	{
-		printf("\n\nHeader of the %dth block:\n", counter+1);
-		printf("prev: %d ", get_prev(index));
-		printf("next: %d ", get_next(index));
-		printf("size: %d ", get_block_size(index));
-		printf("flag: %d ", get_flag(index));
-		if(!get_flag(index))
-		{
-			printf("prev bucket: %d ", get_prev_bucket(index));
-			printf("next bucket: %d ", get_next_bucket(index));
-		}
-
-		index = get_next(index);
-		counter++;
-	}
-	printf("\n\nHeader of the %dth block:\n", counter+1);
-	printf("prev: %d ", get_prev(index));
-	printf("next: %d ", get_next(index));
-	printf("size: %d ", get_block_size(index));
-	printf("flag: %d ", get_flag(index));
-	if(!get_flag(index))
-	{
-		printf("prev bucket: %d ", get_prev_bucket(index));
-		printf("next bucket: %d ", get_next_bucket(index));
-	}
-
-	return 0;
-}
 
 //Series of get functions to retrieve values from the block of memory
 U32 get_prev(int index)
@@ -153,9 +109,9 @@ void half_init()
 	bucket[10] = 0;
 }
 
-//for all the index = (n/4), must make sure that it will always take pieces of 32 even if it means it is more than what is required
 void *half_alloc( int n )
 {
+	//If request size is too large return NULL
 	int i;
 	if(n>32764)
 		return NULL;
@@ -183,7 +139,7 @@ void *half_alloc( int n )
 				//the size is changed to reflect the new smaller size of the free mem
 				int index = bucket[counter];
 
-				//sets each part of the header 1 index from each other starting at index+n+4 which is the end of the now allocated n bytes of memory
+				//sets each part of the header 1 index from each other starting at index+n/4 which is the end of the now allocated n bytes of memory
 				set_prev(index+n/4, index);
 				//check if the block was the last one and make it point to itself it is
 				if(get_next(index) == index)
@@ -249,6 +205,7 @@ void *half_alloc( int n )
 
 void half_free( void * address)
 {
+	printf("%d\n", bucket[10]);
 	int index = ((int)address - (int)&my_mem[0])/32;
 	if(!(get_flag(index) == 0 || index > 8192 || index < 0))
 	{
