@@ -19,50 +19,52 @@ typedef unsigned long U64;
 U32 my_mem [8192];
 
 //INITIALIZE THE BUCKETS
-int bucket[10] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
+int bucket[11] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
 
 //my base address of the block
-//
-//int main(void)
-//{
-//	printf("%d\n", &my_mem[0]);
-//	half_init();
-//	half_alloc(32768);
-//	int i;
-//	printf("Buckets:\n");
-//	for(i=0; i<= 10; i++)
-//		printf("Address of bucket %d is: %d\n",i, bucket[i]);
-//	int index = 0;
-//	int counter = 0;
-//	while(get_next(index) != index)
-//	{
-//		printf("\n\nHeader of the %dth block:\n", counter+1);
-//		printf("prev: %d ", get_prev(index));
-//		printf("next: %d ", get_next(index));
-//		printf("size: %d ", get_block_size(index));
-//		printf("flag: %d ", get_flag(index));
-//		if(!get_flag(index))
-//		{
-//			printf("prev bucket: %d ", get_prev_bucket(index));
-//			printf("next bucket: %d ", get_next_bucket(index));
-//		}
-//
-//		index = get_next(index);
-//		counter++;
-//	}
-//	printf("\n\nHeader of the %dth block:\n", counter+1);
-//	printf("prev: %d ", get_prev(index));
-//	printf("next: %d ", get_next(index));
-//	printf("size: %d ", get_block_size(index));
-//	printf("flag: %d ", get_flag(index));
-//	if(!get_flag(index))
-//	{
-//		printf("prev bucket: %d ", get_prev_bucket(index));
-//		printf("next bucket: %d ", get_next_bucket(index));
-//	}
-//
-//	return 0;
-//}
+
+int main(void)
+{
+	half_init();
+	half_alloc(3121);
+	half_alloc(512);
+	half_alloc(5212);
+
+	int i;
+	printf("Buckets:\n");
+	for(i=0; i<= 10; i++)
+		printf("Address of bucket %d is: %d\n",i, bucket[i]);
+	int index = 0;
+	int counter = 0;
+	while(get_next(index) != index)
+	{
+		printf("\n\nHeader of the %dth block:\n", counter+1);
+		printf("prev: %d ", get_prev(index));
+		printf("next: %d ", get_next(index));
+		printf("size: %d ", get_block_size(index));
+		printf("flag: %d ", get_flag(index));
+		if(!get_flag(index))
+		{
+			printf("prev bucket: %d ", get_prev_bucket(index));
+			printf("next bucket: %d ", get_next_bucket(index));
+		}
+
+		index = get_next(index);
+		counter++;
+	}
+	printf("\n\nHeader of the %dth block:\n", counter+1);
+	printf("prev: %d ", get_prev(index));
+	printf("next: %d ", get_next(index));
+	printf("size: %d ", get_block_size(index));
+	printf("flag: %d ", get_flag(index));
+	if(!get_flag(index))
+	{
+		printf("prev bucket: %d ", get_prev_bucket(index));
+		printf("next bucket: %d ", get_next_bucket(index));
+	}
+
+	return 0;
+}
 
 //Series of get functions to retrieve values from the block of memory
 U32 get_prev(int index)
@@ -170,7 +172,6 @@ void *half_alloc( int n )
 		int counter = 0;
 		while((n > (16*(2<<counter)) && counter <= 10) || (bucket[counter] == -1 && counter <= 10))
 			counter++;
-		printf("%d\n", bucket[10]);
 		//No space is available for allocation of a block of that size
 		if(counter == 11)
 			return NULL;
@@ -183,29 +184,29 @@ void *half_alloc( int n )
 				int index = bucket[counter];
 
 				//sets each part of the header 1 index from each other starting at index+n+4 which is the end of the now allocated n bytes of memory
-				set_prev(index+(int)ceil(n/4.0), index);
+				set_prev(index+n/4, index);
 				//check if the block was the last one and make it point to itself it is
 				if(get_next(index) == index)
-					set_next(index+(int)ceil(n/4.0), index+(int)ceil(n/4.0));
+					set_next(index+n/4, index+n/4);
 				else
-					set_next(index+(int)ceil(n/4.0), get_next(index));
-				set_block_size(index+(int)ceil(n/4.0), get_block_size(index)-(int)ceil(n/32.0));
-				set_flag(index+(int)ceil(n/4.0), 0);
-				set_prev_bucket(index+(int)ceil(n/4.0), index+(int)ceil(n/4.0));
+					set_next(index+n/4, get_next(index));
+				set_block_size(index+n/4, get_block_size(index)-n/32);
+				set_flag(index+n/4, 0);
+				set_prev_bucket(index+n/4, index+n/4);
 				//check if the block is the last in the bucket
 				if(get_next_bucket(index) == index)
-					set_next_bucket(index+(int)ceil(n/4.0), index+(int)ceil(n/4.0));
+					set_next_bucket(index+n/4, index+n/4);
 				else
-					set_next_bucket(index+(int)ceil(n/4.0), get_next_bucket(index));
+					set_next_bucket(index+n/4, get_next_bucket(index));
 
 				//Checks if the remaining memory after allocation is enough to form a new block of free memory with a header and creates them
-				if((int)(get_block_size(index+(int)ceil(n/4.0))-(int)ceil(n/32.0)) >= (8*(2<<counter))/32 + 4)
+				if((int)(get_block_size(index+n/4)-n/32) >= (8*(2<<counter))/32)
 				{
 					//change bucket[counter]'s address to newly located header
-					bucket[counter] += (int)ceil(n/4.0);
+					bucket[counter] += n/4;
 				}
 				//handles the case where the new the memory must be placed in a smaller bucket
-				else if((int)(get_block_size(index+(int)ceil(n/4.0)) - (int)ceil(n/32.0)) < (8*(2<<counter))/32 + 4)
+				else if((int)(get_block_size(index+n/4) - n/32) < (8*(2<<counter))/32)
 				{
 					int temp = bucket[counter];
 					//remove the memory slot from the previous bucket
@@ -217,11 +218,11 @@ void *half_alloc( int n )
 					else
 						bucket[counter] = -1;
 					//since the new block size has been confirmed to be smaller, counter is adjusted to reflect the change
-					while(get_block_size(index+(int)ceil(n/4.0))*32 < (8*(2<<counter)) && counter >= 0)
+					while(get_block_size(index+n/4)*32 < (8*(2<<counter)) && counter >= 0)
 						counter--;
 					//sets the address of the new bucket to where the new block of memory is
 					bucket[counter] = temp;
-					bucket[counter] += (int)ceil(n/4.0);
+					bucket[counter] += n/4;
 				}
 				//in the event that there isn't enough remaining free memory to create a new block, the bucket will now point to the next free memory block in the bucket
 				else if(get_next_bucket(index) != -1)
@@ -234,10 +235,10 @@ void *half_alloc( int n )
 					bucket[counter] = -1;
 				}
 				//changes the size of the new blocks accordingly, set the flags and relocate pointers
-				set_block_size(index, (int)ceil(n/32.0));
+				set_block_size(index, n/32);
 				set_flag(index, 1);
-				set_next(index, index+(int)ceil(n/4.0));
-				return &my_mem[0]+index;
+				set_next(index, index+n/4);
+				return &my_mem[0]+(index*4);
 			}
 			else
 				return NULL;
